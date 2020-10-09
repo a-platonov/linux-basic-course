@@ -4,15 +4,22 @@
 #include <time.h>
 #include <sys/wait.h>
 
-
-int sum(int *elements) {
+void sum(int *array, size_t length, int* result) {
     int sum = 0;
-    for (int i = 0; i < sizeof(elements); i++) {
-        sum = sum + elements[i];
-        printf("%d ", elements[i]);
+    for (int i = 0; i < length; i++) {
+        sum = sum + array[i];
     }
+    printf(" (%d) ", sum);
 
-    return sum;
+    result = &sum;
+}
+
+void print_array(int *array, size_t length) {
+    printf("[");
+    for (int i = 0; i < length - 1; i++) {
+        printf("%d, ", array[i]);
+    }
+    printf("%d]", array[length -1]);
 }
 
 
@@ -34,9 +41,7 @@ int main(int argc, char* argv[]) {
 
     // Print generated data
     for (int i = 0; i < process_count; i++) {
-        for (int j = 0; j < elements_count; j++) {
-            printf("%d ", arrays[i][j]);
-        }
+        print_array(arrays[i], sizeof(arrays[i]) / sizeof(arrays[i][0]));
         printf("\n");
     }
 
@@ -48,14 +53,22 @@ int main(int argc, char* argv[]) {
         if (!(child_processes[i] = fork())) {
             // Child process
             printf("Child(i: %d) ", i);
-            int s = sum(arrays[i]);
-            printf("| sum = %d\n", s);
+            sum(arrays[i], sizeof(arrays[i]) / sizeof(arrays[i][0]), &results[i]);
+            printf("| sum = %d\n", results[i]);
             exit(EXIT_SUCCESS);
         }
     }
 
-    wait(&child_processes[1]);
-    wait(&child_processes[0]);
+    int total_sum = 0;
+    for (int i = 0; i < sizeof(child_processes) / sizeof(child_processes[0]); i++) {
+        wait(&child_processes[i]);
+    }
+
+    for (int i = 0; i < sizeof(results) / sizeof(results[0]); i++) {
+        total_sum = total_sum + results[i];
+    }
+
+    printf("Total sum: %d", total_sum);
 
     return 0;
 }
