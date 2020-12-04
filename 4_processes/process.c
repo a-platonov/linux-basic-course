@@ -4,14 +4,13 @@
 #include <time.h>
 #include <sys/wait.h>
 
-void sum(int *array, size_t length, int* result) {
+int sum(int *array, size_t length) {
     int sum = 0;
     for (int i = 0; i < length; i++) {
         sum = sum + array[i];
     }
     printf(" (%d) ", sum);
-
-    result = &sum;
+    return sum;
 }
 
 void print_array(int *array, size_t length) {
@@ -47,14 +46,20 @@ int main(int argc, char* argv[]) {
 
     //Process arrays
     pid_t child_processes[process_count];
-    int results[process_count];
+
+    int p[2];
+    if (pipe(p) == -1) {
+        exit(1);
+    }
 
     for (int i = 0; i < process_count; i++) {
         if (!(child_processes[i] = fork())) {
             // Child process
             printf("Child(i: %d) ", i);
-            sum(arrays[i], sizeof(arrays[i]) / sizeof(arrays[i][0]), &results[i]);
-            printf("| sum = %d\n", results[i]);
+            int result = sum(arrays[i], sizeof(arrays[i]) / sizeof(arrays[i][0]));
+            write(p[1], &result, sizeof(int));
+            printf("| sum = %d\n", result);
+            close(p[1]);
             exit(EXIT_SUCCESS);
         }
     }
@@ -64,12 +69,14 @@ int main(int argc, char* argv[]) {
         wait(&child_processes[i]);
     }
 
-    for (int i = 0; i < sizeof(results) / sizeof(results[0]); i++) {
-        total_sum = total_sum + results[i];
+    close(p[1]);
+    int ps, nbytest;
+    while ((nbytest = read(p[0], &ps, sizeof(int))) > 0) {
+        printf("%d\n", ps);
+        total_sum = total_sum + ps;
     }
 
-    printf("Total sum: %d", total_sum);
+    printf("Total sum: %d\n", total_sum);
 
     return 0;
 }
-
